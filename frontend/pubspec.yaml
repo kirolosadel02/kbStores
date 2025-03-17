@@ -1,0 +1,16 @@
+name: kb_stores_frontend
+description: A Flutter project for kbStores.
+
+# Add the environment section
+environment:
+  sdk: '>=2.12.0 <3.0.0'  # Adjust the version based on your Flutter version
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_dotenv: ^5.0.2  # Example dependency
+  http: ^0.13.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
