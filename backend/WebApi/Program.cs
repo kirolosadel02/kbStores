@@ -1,25 +1,43 @@
-using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
-using src.Shared;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
+using WebApi.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:8081");
+// Changed port to match Docker container port (8080)
+builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
-// Load the .env file
-Env.Load();
+// Get connection string from appsettings.json
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Retrieve the connection string from environment variables
-var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-
-// Register the database context with the connection string
+// Configure DbContext with SQL Server
 builder.Services.AddDbContext<kbStoresContext>(options =>
     options.UseSqlServer(connectionString));
 
+// Add Redis
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (string.IsNullOrEmpty(redisConnectionString))
+{
+    Console.WriteLine("Redis connection string is missing in appsettings.json.");
+}
+else
+{
+    try
+    {
+        var redis = ConnectionMultiplexer.Connect(redisConnectionString);
+        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        Console.WriteLine("Redis is working and connected successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Redis connection failed: {ex.Message}");
+    }
+}
+
 builder.Services.AddControllers();
 
-// **Add CORS before building the app**
+// Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
@@ -28,16 +46,15 @@ builder.Services.AddCors(options =>
                           .AllowAnyHeader());
 });
 
-// Add Swagger
+// Configure Swagger
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
 });
 
-// **Build the application after configuring services**
 var app = builder.Build();
 
-// **Now it is safe to use `app.Services`**
+// Test database connection
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<kbStoresContext>();
@@ -55,12 +72,12 @@ using (var scope = app.Services.CreateScope())
 // Enable CORS
 app.UseCors("AllowAll");
 
+// Configure Swagger UI in development environment
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 
-// Enable middleware to serve generated Swagger as a JSON endpoint
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {

@@ -1,2 +1,0 @@
-DB_CONNECTION_STRING=Server=db;Database=kbStores;User=sa;Password=YourPassword123!;
-DB_PASSWORD=YourPassword123!
